@@ -80,6 +80,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "RecallOS — Your AI Second Brain" },
+      { name: "twitter:description", content: "Capture, organize and remember everything you learn — for life." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/50592c48-1524-4336-8028-36acf1bca32e/id-preview-6f194f66--8bbb904e-6130-4912-992e-99278b7958a1.lovable.app-1779816397628.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/50592c48-1524-4336-8028-36acf1bca32e/id-preview-6f194f66--8bbb904e-6130-4912-992e-99278b7958a1.lovable.app-1779816397628.png" },
     ],
     links: [
       {
