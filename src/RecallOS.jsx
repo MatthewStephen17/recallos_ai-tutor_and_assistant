@@ -183,7 +183,12 @@ const CSS = `
 async function callClaude(messages, systemPrompt = "", maxTokens = 1000) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "x-api-key": "sk-ant-api03-...", // Cleaned up quotes and single comma
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerously-allow-browser": "true" 
+    },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
@@ -681,26 +686,27 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
       const card = cards[cardIdx];
       const done = cardIdx >= cards.length;
 
-      if (done) return (
-        <div className="ro-fadein" style={{ textAlign: "center", padding: "3rem 1rem" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
-          <p style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF", marginBottom: 6 }}>Session Complete!</p>
-          <p style={{ color: "#6B7BA4", fontSize: 14, marginBottom: "1.5rem" }}>
-            {score.c} correct · {score.w} wrong · {Math.round((score.c / cards.length) * 100)}% accuracy
-          </p>
-          <div style={{ display: "inline-block", width: 80, height: 80, borderRadius: "50%", border: `3px solid ${score.c / cards.length > 0.7 ? "#00DFA2" : "#F87171"}`, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", margin: "0 auto 1.5rem" }}>
-            <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF" }}>{score.c}/{cards.length}</span>
-          </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <button className="ro-btn ro-btn-primary" onClick={() => { setCardIdx(0); setFlipped(false); setScore({ c: 0, w: 0 }); }}>
-              <Icon.Refresh /> Retry
-            </button>
-            <button className="ro-btn ro-btn-ghost" onClick={() => { setQuizMode(false); }}>
-              Back to Library
-            </button>
-          </div>
-        </div>
-      );
+     if (done) return (
+  <div className="ro-fadein" style={{ textAlign: "center", padding: "3rem 1rem" }}>
+    <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
+    <p style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF", marginBottom: 6 }}>Session Complete!</p>
+    <p style={{ color: "#6B7BA4", fontSize: 14, marginBottom: "1.5rem" }}>
+      {score.c} correct · {score.w} wrong · {Math.round((score.c / cards.length) * 100)}% accuracy
+    </p>
+    {/* FIXED: Removed duplicate display key conflict here */}
+    <div style={{ width: 80, height: 80, borderRadius: "50%", border: `3px solid ${score.c / cards.length > 0.7 ? "#00DFA2" : "#F87171"}`, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", margin: "0 auto 1.5rem" }}>
+      <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF" }}>{score.c}/{cards.length}</span>
+    </div>
+    <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+      <button className="ro-btn ro-btn-primary" onClick={() => { setCardIdx(0); setFlipped(false); setScore({ c: 0, w: 0 }); }}>
+        <Icon.Refresh /> Retry
+      </button>
+      <button className="ro-btn ro-btn-ghost" onClick={() => { setQuizMode(false); }}>
+        Back to Library
+      </button>
+    </div>
+  </div>
+);
 
       return (
         <div className="ro-fadein">
