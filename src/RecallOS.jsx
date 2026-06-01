@@ -1,6 +1,32 @@
+// 1. All imports MUST stay at the very top line
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-// ─── Sample Pre-Loaded Data ───────────────────────────────────────────────────
+// 2. Initialize your Supabase connection outside of the component
+const supabaseUrl = "https://erfwqsbgqauathruqkop.supabase.co";
+const supabaseAnonKey = "sb_publishable_8RU4lvokOV_cTowWuMqpXw_G2tXFKiZ";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// 3. Independent API helper functions
+async function callClaude(messages, systemPrompt = "", maxTokens = 1000) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messages: messages,
+      system: systemPrompt,
+      max_tokens: maxTokens
+    }),
+  });
+  
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const data = await res.json(); 
+  return data.choices?.[0]?.message?.content || data.text || ""; 
+}
+
+// 4. Sample Pre-Loaded Core Datasets
 const SAMPLE_NOTES = [
   {
     id: 1,
@@ -43,6 +69,28 @@ const SAMPLE_NOTES = [
     reviewCount: 7,
   },
 ];
+
+// 5. Main application setup starts below everything else
+// 5. Main application setup starts below everything else
+export default function RecallOS() {
+  const [user, setUser] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null); // Last line here now!
+  
+  // Track active authorization session data on load
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+// ... rest of your useEffect logic ...
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // ... rest of your UI logic (including CSS injection, render components, etc.)
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const CSS = `
@@ -179,28 +227,6 @@ const CSS = `
 .ro-glow{animation:glow 2.5s ease-in-out infinite;}
 `;
 
-// ─── API Helper ───────────────────────────────────────────────────────────────
-async function callClaude(messages, systemPrompt = "", maxTokens = 1000) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      "x-api-key": "sk-ant-api03-...", // Cleaned up quotes and single comma
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerously-allow-browser": "true" 
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages,
-    }),
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const data = await res.json();
-  return data.content?.[0]?.text || "";
-}
-
 // ─── Icons (inline SVG) ───────────────────────────────────────────────────────
 const Icon = {
   Brain: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
@@ -226,7 +252,6 @@ const Icon = {
   Sparkles: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>,
 };
 
-// ─── Nav Items ────────────────────────────────────────────────────────────────
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "Dashboard" },
   { id: "upload", label: "Upload & Process", icon: "Upload" },
@@ -237,10 +262,10 @@ const NAV = [
 ];
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
-export default function RecallOS() {
-  const [page, setPage] = useState("dashboard");
-  const [notes, setNotes] = useState(SAMPLE_NOTES);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [page, setPage] = useState("dashboard");   // <--- This line stays!
+  const [notes, setNotes] = useState(SAMPLE_NOTES); // <--- This line stays!
+  const [isLoading, setIsLoading] = useState(false); // <--- This line stays!
 
   // Upload state
   const [uploadTab, setUploadTab] = useState("text");
@@ -256,7 +281,6 @@ export default function RecallOS() {
   const [cardIdx, setCardIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [score, setScore] = useState({ c: 0, w: 0 });
-  const [noteTaskState, setNoteTaskState] = useState({});
 
   // Tutor state
   const [chatMsgs, setChatMsgs] = useState([
@@ -289,6 +313,26 @@ export default function RecallOS() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMsgs]);
 
+  // NEW: Fetch historical chat history from Supabase on component load
+  useEffect(() => {
+    async function loadChatHistory() {
+      try {
+        const res = await fetch("/api/messages");
+        if (res.ok) {
+          const historicalMessages = await res.json();
+          if (historicalMessages && historicalMessages.length > 0) {
+            setChatMsgs(historicalMessages);
+          }
+        } else {
+          console.error("Backend returned an error fetching history:", res.status);
+        }
+      } catch (err) {
+        console.error("⚠️ Frontend failed to reach /api/messages:", err);
+      }
+    }
+    loadChatHistory();
+  }, []);
+
   // ── Process Uploaded Content ──────────────────────────────────────────────
   const processContent = async () => {
     if (!inputText.trim()) return;
@@ -304,18 +348,21 @@ export default function RecallOS() {
     ];
 
     try {
-      const system = `You are an expert educational AI. Process the given text and return ONLY a valid JSON object with these exact fields (no markdown, no preamble):
+      const system = `You are an expert educational AI. Process the given text and return ONLY a valid JSON object with these exact fields. 
+Make the writing highly structured, engaging, and clear with appropriate contextual emojis (like ChatGPT style) within the title, summary strings, and flashcards.
+
+Return raw JSON matching this template exactly (do NOT wrap it in markdown codeblocks, do NOT add introductory sentences):
 {
-  "title": "smart title (max 6 words)",
-  "summary": "3-paragraph student-friendly summary (200-250 words)",
-  "keyConcepts": ["concept1","concept2","concept3","concept4","concept5","concept6"],
+  "title": "Smart Emoji Title 🧠 (max 6 words)",
+  "summary": "A comprehensive, beautifully structured 3-paragraph student-friendly summary. Use emojis at key points to emphasize core concepts clearly.",
+  "keyConcepts": ["💡 Concept 1","🔬 Concept 2","📊 Concept 3","⚙️ Concept 4","🔑 Concept 5","📝 Concept 6"],
   "flashcards": [
-    {"question":"...","answer":"...","difficulty":"easy"|"medium"|"hard"},
-    ... (5-8 total)
+    {"question":"❓ Clear question here?","answer":"✨ Descriptive engaging answer here.","difficulty":"easy"},
+    {"question":"❓ Another concept check?","answer":"✨ Detailed breakdown answer here.","difficulty":"medium"}
   ],
   "tasks": [
-    {"id":"t_new_1","title":"specific actionable task","estimatedMinutes":20,"priority":1,"completed":false},
-    ... (4-6 total, ADHD-friendly tiny steps)
+    {"id":"t_new_1","title":"🎯 Specific actionable bite-sized step","estimatedMinutes":20,"priority":1,"completed":false},
+    {"id":"t_new_2","title":"🔍 Review core concept definitions","estimatedMinutes":15,"priority":2,"completed":false}
   ]
 }`;
 
@@ -326,36 +373,53 @@ export default function RecallOS() {
       const raw = await callClaude(
         [{ role: "user", content: `Process this content:\n\n${inputText}` }],
         system,
-        1200
+        1500
       );
 
       steps[2]();
-      await new Promise(r => setTimeout(r, 400));
-      steps[3]();
-      await new Promise(r => setTimeout(r, 300));
 
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      let cleanRaw = raw.trim();
+      
+      if (cleanRaw.startsWith("```")) {
+        cleanRaw = cleanRaw.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+      }
+      
+      const firstOpenBrace = cleanRaw.indexOf("{");
+      const lastCloseBrace = cleanRaw.lastIndexOf("}");
+      if (firstOpenBrace !== -1 && lastCloseBrace !== -1) {
+        cleanRaw = cleanRaw.substring(firstOpenBrace, lastCloseBrace + 1);
+      }
+
+     // 1. Clean out problematic hidden control characters before parsing
+      const sanitizedCleanRaw = cleanRaw.replace(/[\x00-\x1F\x7F-\x9F]/g, (match) => {
+        if (match === '\n') return '\\n'; // Safely escape line breaks
+        if (match === '\t') return '\\t'; // Safely escape tabs
+        return ''; // Drop other corrupting control characters
+      });
+
+      // 2. Parse the sanitized clean string
+      const parsed = JSON.parse(sanitizedCleanRaw);
 
       const newNote = {
         id: Date.now(),
-        title: inputTitle.trim() || parsed.title,
-        summary: parsed.summary,
+        title: inputTitle.trim() || parsed.title || "Untitled Summary 📝",
+        summary: parsed.summary || "No summary provided.",
         keyConcepts: parsed.keyConcepts || [],
         flashcards: parsed.flashcards || [],
-        tasks: parsed.tasks || [],
-        createdAt: new Date(),
-        reviewCount: 0,
+        tasks: parsed.tasks || []
       };
+      steps[3]();
+      await new Promise(r => setTimeout(r, 500));
 
       setNotes(prev => [newNote, ...prev]);
       setLastProcessed(newNote);
-      setProcStep("done");
+      setProcStep("success");
       setInputText("");
       setInputTitle("");
-    } catch (err) {
-      setProcStep("idle");
-      alert("Error processing content. Please try again.");
+
+    } catch (error) {
+      console.error("Failed to parse AI document upload response:", error);
+      setProcStep("error");
     } finally {
       setIsLoading(false);
     }
@@ -417,8 +481,18 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
         system,
         1200
       );
-      const clean = raw.replace(/```json|```/g, "").trim();
-      setCourseData(JSON.parse(clean));
+      
+      let cleanRaw = raw.trim();
+      if (cleanRaw.startsWith("```")) {
+        cleanRaw = cleanRaw.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+      }
+      const firstOpenBrace = cleanRaw.indexOf("{");
+      const lastCloseBrace = cleanRaw.lastIndexOf("}");
+      if (firstOpenBrace !== -1 && lastCloseBrace !== -1) {
+        cleanRaw = cleanRaw.substring(firstOpenBrace, lastCloseBrace + 1);
+      }
+
+      setCourseData(JSON.parse(cleanRaw));
     } catch {
       alert("Error building roadmap. Please try again.");
     } finally {
@@ -492,7 +566,6 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
         </div>
 
         <div className="ro-grid2">
-          {/* Streak card */}
           <div className="ro-card">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ".75rem" }}>
               <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 15, fontWeight: 600, color: "#F1F5FF" }}>Weekly Streak</span>
@@ -512,7 +585,6 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
             <p style={{ fontSize: 13, color: "#4A5880" }}>Your longest streak: <span style={{ color: "#FBBF24", fontWeight: 600 }}>12 days</span>. You're halfway there!</p>
           </div>
 
-          {/* Today's Review */}
           <div className="ro-card">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ".75rem" }}>
               <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 15, fontWeight: 600, color: "#F1F5FF" }}>Today's Review Queue</span>
@@ -539,7 +611,6 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
 
         <hr className="ro-divider" />
 
-        {/* Quick Actions */}
         <p className="ro-label">Quick Actions</p>
         <div className="ro-grid3">
           {[
@@ -568,7 +639,7 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
         <p className="ro-page-title">Upload & Process</p>
         <p className="ro-page-sub">Paste your notes, lectures, or any text — AI transforms it into organized knowledge.</p>
 
-        {procStep !== "done" ? (
+        {procStep !== "success" ? (
           <div className="ro-grid2">
             <div>
               <div className="tab-wrap">
@@ -613,7 +684,7 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
 
             <div>
               <div className="ro-card" style={{ marginBottom: 14 }}>
-                <p style={{ fontFamily: "'Outfit',sans-serif", fontSize: 14, fontWeight: 600, color: "#F1F5FF", marginBottom: ".875rem" }}>What AI will generate</p>
+                <p style={{ fontFamily: "'Outfit',sans-serif", fontSize: 14.5, fontWeight: 600, color: "#F1F5FF", marginBottom: ".875rem" }}>What AI will generate</p>
                 {[
                   { icon: "📝", label: "Smart Summary", desc: "Student-friendly, structured overview" },
                   { icon: "⚡", label: "Flashcards", desc: "Spaced-repetition ready Q&A cards" },
@@ -687,26 +758,25 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
       const done = cardIdx >= cards.length;
 
      if (done) return (
-  <div className="ro-fadein" style={{ textAlign: "center", padding: "3rem 1rem" }}>
-    <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
-    <p style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF", marginBottom: 6 }}>Session Complete!</p>
-    <p style={{ color: "#6B7BA4", fontSize: 14, marginBottom: "1.5rem" }}>
-      {score.c} correct · {score.w} wrong · {Math.round((score.c / cards.length) * 100)}% accuracy
-    </p>
-    {/* FIXED: Removed duplicate display key conflict here */}
-    <div style={{ width: 80, height: 80, borderRadius: "50%", border: `3px solid ${score.c / cards.length > 0.7 ? "#00DFA2" : "#F87171"}`, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", margin: "0 auto 1.5rem" }}>
-      <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF" }}>{score.c}/{cards.length}</span>
-    </div>
-    <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-      <button className="ro-btn ro-btn-primary" onClick={() => { setCardIdx(0); setFlipped(false); setScore({ c: 0, w: 0 }); }}>
-        <Icon.Refresh /> Retry
-      </button>
-      <button className="ro-btn ro-btn-ghost" onClick={() => { setQuizMode(false); }}>
-        Back to Library
-      </button>
-    </div>
-  </div>
-);
+       <div className="ro-fadein" style={{ textAlign: "center", padding: "3rem 1rem" }}>
+         <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
+         <p style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF", marginBottom: 6 }}>Session Complete!</p>
+         <p style={{ color: "#6B7BA4", fontSize: 14, marginBottom: "1.5rem" }}>
+           {score.c} correct · {score.w} wrong · {Math.round((score.c / cards.length) * 100)}% accuracy
+         </p>
+         <div style={{ width: 80, height: 80, borderRadius: "50%", border: `3px solid ${score.c / cards.length > 0.7 ? "#00DFA2" : "#F87171"}`, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", margin: "0 auto 1.5rem" }}>
+           <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 22, fontWeight: 700, color: "#F1F5FF" }}>{score.c}/{cards.length}</span>
+         </div>
+         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+           <button className="ro-btn ro-btn-primary" onClick={() => { setCardIdx(0); setFlipped(false); setScore({ c: 0, w: 0 }); }}>
+             <Icon.Refresh /> Retry
+           </button>
+           <button className="ro-btn ro-btn-ghost" onClick={() => { setQuizMode(false); }}>
+             Back to Library
+           </button>
+         </div>
+       </div>
+     );
 
       return (
         <div className="ro-fadein">
@@ -1084,9 +1154,6 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
     </div>
   );
 
-  const PAGES = { dashboard: PageDashboard, upload: PageUpload, knowledge: PageKnowledge, tutor: PageTutor, course: PageCourse, reflection: PageReflection };
-  const ActivePage = PAGES[page] || PageDashboard;
-
   return (
     <div className="ro">
       {/* Sidebar */}
@@ -1123,7 +1190,12 @@ Limit to 8 weeks max. Make tasks ADHD-friendly (concrete, small steps).`;
 
       {/* Main */}
       <div className="ro-main">
-        <ActivePage />
+        {page === "dashboard" && PageDashboard()}
+        {page === "upload" && PageUpload()}
+        {page === "knowledge" && PageKnowledge()}
+        {page === "tutor" && PageTutor()}
+        {page === "course" && PageCourse()}
+        {page === "reflection" && PageReflection()}
       </div>
     </div>
   );
